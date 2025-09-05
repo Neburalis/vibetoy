@@ -14,4 +14,8 @@ void handle_game_input(ApplicationState* app, const struct tb_event* event);
 void handle_game_over_input(ApplicationState* app, const struct tb_event* event);
 void start_single_player_game(ApplicationState* app);
 
+// New architecture integration functions
+void handle_game_selection_input(ApplicationState* app, const struct tb_event* event);
+void setup_game_from_selection(ApplicationState* app);
+
 #endif

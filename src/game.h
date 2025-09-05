@@ -2,7 +2,9 @@
 #define GAME_H
 
 #include <stdbool.h>
+#include "game_manager.h"
 
+// Legacy types for backward compatibility (will be removed gradually)
 typedef enum {
     CELL_EMPTY = 0,
     CELL_X = 1,
@@ -20,6 +22,7 @@ typedef enum {
     DIFFICULTY_HARD
 } AIDifficulty;
 
+// Legacy GameState structure (for compatibility during transition)
 typedef struct {
     CellState board[3][3];
     int cursor_x;  // Keep for backward compatibility
@@ -30,6 +33,7 @@ typedef struct {
 
 typedef enum {
     STATE_MAIN_MENU,
+    STATE_GAME_SELECTION,  // New state for game selection
     STATE_MODE_SELECTION,
     STATE_DIFFICULTY_SELECTION,
     STATE_PLAYING,
@@ -48,6 +52,7 @@ typedef struct {
     int game_over_option_index;    // Which game over option is hovered
     int hovered_mode_selection;    // For mode selection screen
     int hovered_difficulty_selection; // For difficulty selection screen
+    int hovered_game_selection;    // For game selection screen
 } GlobalCursor;
 
 // AI state tracking
@@ -61,23 +66,40 @@ typedef struct {
 
 typedef struct {
     AppState current_state;
+    AppState previous_state;  // For returning from pause/options
+    
+    // Game management (new architecture)
+    GameManager game_manager;
+    
+    // Legacy fields (for backward compatibility during transition)
     GameState game;
     GameMode game_mode;
     AIDifficulty ai_difficulty;
     CellState human_player;    // CELL_X or CELL_O
     CellState ai_player;       // CELL_X or CELL_O
     bool ai_thinking;          // Visual feedback during AI turn
+    
+    // UI state
     int menu_selection;
+    int game_selection;        // Which game is selected in game selection menu
     int mode_selection;
     int difficulty_selection;
     CellState winner;
     bool is_draw;
     bool has_active_game;
-    GlobalCursor cursor;  // New global cursor
-    AIState ai_state;     // AI state tracking
+    
+    // Global cursor system (unchanged)
+    GlobalCursor cursor;
+    
+    // Legacy AI state (for compatibility)
+    AIState ai_state;
+    
+    // Timing for games that need it
+    double last_update_time;
+    double frame_delta;
 } ApplicationState;
 
-// Game logic functions
+// Legacy game logic functions (for backward compatibility)
 void init_game(GameState* game);
 void reset_board(GameState* game);
 bool is_valid_move(const GameState* game, int x, int y);
@@ -94,7 +116,7 @@ void set_cursor_position(ApplicationState* app, int x, int y);
 void update_hover_state(ApplicationState* app);
 void handle_cursor_click(ApplicationState* app);
 
-// AI functions
+// Legacy AI functions (for backward compatibility)
 int get_ai_move(const GameState* game, CellState ai_player, AIDifficulty difficulty);
 int minimax_alpha_beta(GameState* game, int depth, int alpha, int beta, 
                       bool maximizing, CellState ai_player, CellState human_player);
@@ -109,5 +131,18 @@ int apply_positional_bonus(int x, int y);
 void trigger_ai_move(ApplicationState* app);
 void init_ai_state(AIState* ai_state);
 void process_ai_turn(ApplicationState* app);
+
+// New game manager integration functions
+void init_application_state(ApplicationState* app);
+bool load_selected_game(ApplicationState* app, GameType game_type);
+void unload_current_game(ApplicationState* app);
+bool has_active_game_session(const ApplicationState* app);
+void update_game_state(ApplicationState* app, double delta_time);
+
+// State transition helpers
+void transition_to_game_selection(ApplicationState* app);
+void transition_to_playing(ApplicationState* app);
+void transition_to_game_over(ApplicationState* app);
+void transition_to_main_menu(ApplicationState* app);
 
 #endif

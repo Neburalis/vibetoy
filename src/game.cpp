@@ -1,8 +1,15 @@
 #include "game.h"
 #include "menu.h"
+#include "game_manager.h"
+#include "games/tictactoe.h"
 #include "../lib/termbox2/termbox2.h"
 #include <stdlib.h>
 #include <time.h>
+
+// Register TicTacToe game when module loads
+static void __attribute__((constructor)) register_tictactoe() {
+    register_game_interface(GAME_TYPE_TICTACTOE, get_tictactoe_interface());
+}
 
 void init_game(GameState* game) {
     game->cursor_x = 1;
@@ -657,4 +664,103 @@ void handle_cursor_click(ApplicationState* app) {
                 break;
         }
     }
+}
+
+// New game manager integration functions
+void init_application_state(ApplicationState* app) {
+    app->current_state = STATE_MAIN_MENU;
+    app->previous_state = STATE_MAIN_MENU;
+    
+    // Initialize game manager
+    init_game_manager(&app->game_manager);
+    
+    // Legacy field initialization for backward compatibility
+    init_game(&app->game);
+    app->game_mode = MODE_TWO_PLAYER;
+    app->ai_difficulty = DIFFICULTY_MEDIUM;
+    app->human_player = CELL_X;
+    app->ai_player = CELL_O;
+    app->ai_thinking = false;
+    
+    // UI state
+    app->menu_selection = 0;
+    app->game_selection = 0;
+    app->mode_selection = 0;
+    app->difficulty_selection = 0;
+    app->winner = CELL_EMPTY;
+    app->is_draw = false;
+    app->has_active_game = false;
+    
+    // Initialize cursor
+    init_global_cursor(&app->cursor);
+    
+    // Legacy AI state
+    init_ai_state(&app->ai_state);
+    
+    // Timing
+    app->last_update_time = 0.0;
+    app->frame_delta = 0.0;
+}
+
+bool load_selected_game(ApplicationState* app, GameType game_type) {
+    if (!app) return false;
+    
+    bool success = load_game(&app->game_manager, game_type);
+    if (success) {
+        success = init_current_game(&app->game_manager);
+        if (success) {
+            app->has_active_game = true;
+        }
+    }
+    
+    return success;
+}
+
+void unload_current_game(ApplicationState* app) {
+    if (!app) return;
+    
+    unload_current_game(&app->game_manager);
+    app->has_active_game = false;
+}
+
+bool has_active_game_session(const ApplicationState* app) {
+    return app && app->has_active_game && is_game_loaded(&app->game_manager);
+}
+
+void update_game_state(ApplicationState* app, double delta_time) {
+    if (!app || !has_active_game_session(app)) return;
+    
+    app->frame_delta = delta_time;
+    update_current_game(&app->game_manager, delta_time);
+}
+
+// State transition helpers
+void transition_to_game_selection(ApplicationState* app) {
+    if (!app) return;
+    
+    app->previous_state = app->current_state;
+    app->current_state = STATE_GAME_SELECTION;
+    app->game_selection = 0;
+}
+
+void transition_to_playing(ApplicationState* app) {
+    if (!app) return;
+    
+    app->previous_state = app->current_state;
+    app->current_state = STATE_PLAYING;
+}
+
+void transition_to_game_over(ApplicationState* app) {
+    if (!app) return;
+    
+    app->previous_state = app->current_state;
+    app->current_state = STATE_GAME_OVER;
+}
+
+void transition_to_main_menu(ApplicationState* app) {
+    if (!app) return;
+    
+    app->previous_state = app->current_state;
+    app->current_state = STATE_MAIN_MENU;
+    app->menu_selection = 0;
 }

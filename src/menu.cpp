@@ -1,5 +1,7 @@
 #include "menu.h"
 #include "game.h"
+#include "game_manager.h"
+#include "games/tictactoe.h"
 
 void init_application(ApplicationState* app) {
     app->current_state = STATE_MAIN_MENU;
@@ -442,4 +444,97 @@ void start_single_player_game(ApplicationState* app) {
     
     // Reset AI state
     init_ai_state(&app->ai_state);
+}
+
+// New architecture integration functions
+void handle_game_selection_input(ApplicationState* app, const struct tb_event* event) {
+    if (event->type != TB_EVENT_KEY) return;
+    
+    switch (event->key) {
+        case TB_KEY_ARROW_UP:
+            move_global_cursor(app, 0, -1);
+            break;
+            
+        case TB_KEY_ARROW_DOWN:
+            move_global_cursor(app, 0, 1);
+            break;
+            
+        case TB_KEY_ARROW_LEFT:
+            move_global_cursor(app, -1, 0);
+            break;
+            
+        case TB_KEY_ARROW_RIGHT:
+            move_global_cursor(app, 1, 0);
+            break;
+            
+        case TB_KEY_ENTER:
+            setup_game_from_selection(app);
+            break;
+            
+        case TB_KEY_ESC:
+            transition_to_main_menu(app);
+            break;
+    }
+    
+    // Handle character input
+    switch (event->ch) {
+        case 'w':
+        case 'W':
+            move_global_cursor(app, 0, -1);
+            break;
+            
+        case 's':
+        case 'S':
+            move_global_cursor(app, 0, 1);
+            break;
+            
+        case 'a':
+        case 'A':
+            move_global_cursor(app, -1, 0);
+            break;
+            
+        case 'd':
+        case 'D':
+            move_global_cursor(app, 1, 0);
+            break;
+            
+        case '1':
+            app->game_selection = 0; // TicTacToe
+            setup_game_from_selection(app);
+            break;
+            
+        case '2':
+            app->game_selection = 1; // Future: Tetris
+            setup_game_from_selection(app);
+            break;
+            
+        case '3':
+            app->game_selection = 2; // Future: Snake
+            setup_game_from_selection(app);
+            break;
+            
+        case 'q':
+        case 'Q':
+            app->current_state = STATE_QUIT;
+            break;
+    }
+}
+
+void setup_game_from_selection(ApplicationState* app) {
+    GameType selected_game = (GameType)app->game_selection;
+    
+    // Load the selected game
+    if (load_selected_game(app, selected_game)) {
+        // For TicTacToe, go to mode selection
+        if (selected_game == GAME_TYPE_TICTACTOE) {
+            app->current_state = STATE_MODE_SELECTION;
+            app->mode_selection = 0;
+        } else {
+            // For other games, go directly to playing
+            transition_to_playing(app);
+        }
+    } else {
+        // Failed to load game, go back to main menu
+        transition_to_main_menu(app);
+    }
 }

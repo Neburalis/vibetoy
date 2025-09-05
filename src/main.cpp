@@ -16,7 +16,7 @@ int main() {
     tb_hide_cursor();
     
     ApplicationState app;
-    init_application(&app);
+    init_application_state(&app);
     
     // Main game loop
     while (app.current_state != STATE_QUIT) {
@@ -25,10 +25,20 @@ int main() {
         // Update hover state before rendering
         update_hover_state(&app);
         
+        // Update game state if there's an active game
+        if (has_active_game_session(&app)) {
+            update_game_state(&app, 0.016); // Assume 60fps for timing
+        }
+        
         // Render current state
         switch (app.current_state) {
             case STATE_MAIN_MENU:
                 render_main_menu_with_hover(&app);
+                break;
+                
+            case STATE_GAME_SELECTION:
+                // Render game selection menu (placeholder for now)
+                render_main_menu_with_hover(&app); // Fallback to main menu
                 break;
                 
             case STATE_MODE_SELECTION:
@@ -89,6 +99,11 @@ int main() {
                 switch (app.current_state) {
                     case STATE_MAIN_MENU:
                         handle_menu_input(&app, &event);
+                        break;
+                        
+                    case STATE_GAME_SELECTION:
+                        // Handle game selection input (placeholder for now)
+                        handle_menu_input(&app, &event); // Fallback to main menu handler
                         break;
                         
                     case STATE_MODE_SELECTION:
